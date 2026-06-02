@@ -60,7 +60,7 @@ interface AppDataContextValue {
   taskTodos: TaskTodo[]
   clients: Client[]
   dashboardStats: DashboardStats
-  createProject: (input: CreateProjectInput) => Promise<void>
+  createProject: (input: CreateProjectInput) => Promise<{ id: string; firstStageId: string }>
   updateProject: (projectId: string, input: Partial<CreateProjectInput>) => Promise<void>
   createStage: (projectId: string, name: string, color: string) => Promise<void>
   updateStage: (stageId: string, name: string, color: string) => Promise<void>
@@ -355,7 +355,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ])
         setStages((curr) => [...curr, ...stagesToCreate])
 
-        return
+        return { id: projectId, firstStageId: stagesToCreate[0]?.id ?? '' }
       }
 
       const projectId = crypto.randomUUID()
@@ -374,6 +374,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
       setProjects((curr) => [project, ...curr])
       setStages((curr) => [...curr, ...projectStages])
+      return { id: projectId, firstStageId: projectStages[0]?.id ?? '' }
     },
     [],
   )
