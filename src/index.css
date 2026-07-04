@@ -65,7 +65,7 @@ body {
 
 h1, h2, h3, h4, h5, h6 { margin: 0; }
 p { margin: 0; }
-#root { min-height: 100vh; }
+#root { height: 100vh; display: flex; flex-direction: column; }
 
 /* ─── Shared utility classes ─────────────────────────────────── */
 .page-title {

@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import {
   DndContext,
@@ -11,6 +12,12 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useAppData } from '../../context/AppDataContext'
 import type { Task, TaskStatus, ProjectStage } from '../../types/domain'
 import { Modal } from '../../components/Modal'
@@ -178,7 +185,7 @@ function TaskQuickForm({
 
       <div className="kb-todo-section">
         <div className="kb-todo-header">
-          <span>To-do list</span>
+          <span>Sub-Tarefas</span>
           <span className="badge badge-purple">{todoDrafts.length}</span>
         </div>
         <div className="kb-todo-add">
@@ -217,7 +224,7 @@ function TaskDetailForm({
   const {
     tasks, updateTaskFull, updateTaskStatus, updateTaskManualMinutes,
     startTaskTimer, stopTaskTimer,
-    createTaskTodo, toggleTaskTodo, taskTodos,
+    createTaskTodo, toggleTaskTodo, taskTodos, deleteTask, deleteTaskTodo,
   } = useAppData()
 
   const task = tasks.find((t) => t.id === taskId)
@@ -298,7 +305,7 @@ function TaskDetailForm({
 
       <div className="kb-todo-section">
         <div className="kb-todo-header">
-          <span>To-do list</span>
+          <span>Sub-Tarefas</span>
           <span className="badge badge-purple">{todos.filter((t) => t.done).length}/{todos.length}</span>
         </div>
         <div className="kb-todo-add">
@@ -312,12 +319,24 @@ function TaskDetailForm({
             <li key={todo.id} className="kb-todo-item">
               <input type="checkbox" checked={todo.done} onChange={() => void toggleTaskTodo(todo.id)} />
               <span className={todo.done ? 'kb-todo-done' : ''}>{todo.title}</span>
+              <button type="button" className="kb-todo-remove" onClick={() => void deleteTaskTodo(todo.id)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </li>
           ))}
         </ul>
       </div>
 
       <div className="modal-footer">
+        <button type="button" className="btn btn-danger btn-sm" onClick={() => {
+          if (window.confirm('Tem certeza que deseja excluir esta tarefa?')) {
+            void deleteTask(taskId)
+            onDone()
+          }
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Excluir
+        </button>
         <button type="submit" className="btn btn-primary">Salvar alteracoes</button>
       </div>
     </form>
@@ -325,7 +344,7 @@ function TaskDetailForm({
 }
 
 /* ── Stage edit form ── */
-function StageEditForm({ stage, onDone }: { stage: ProjectStage; onDone: () => void }) {
+function StageEditForm({ stage, onDone, onDelete }: { stage: ProjectStage; onDone: () => void; onDelete: () => void }) {
   const { updateStage } = useAppData()
   const [name, setName] = useState(stage.name)
   const [color, setColor] = useState(stage.color)
@@ -346,7 +365,13 @@ function StageEditForm({ stage, onDone }: { stage: ProjectStage; onDone: () => v
           </div>
         </div>
       </div>
-      <div className="modal-footer"><button type="submit" className="btn btn-primary">Salvar etapa</button></div>
+      <div className="modal-footer">
+        <button type="button" className="btn btn-danger btn-sm" onClick={onDelete}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Excluir
+        </button>
+        <button type="submit" className="btn btn-primary">Salvar etapa</button>
+      </div>
     </form>
   )
 }
@@ -379,9 +404,197 @@ function NewStageForm({ projectId, onDone }: { projectId: string; onDone: () => 
   )
 }
 
+/* ── Sortable stage item ── */
+function SortableStageItem({
+  stage,
+  taskCount,
+  onEdit,
+  onDelete,
+}: {
+  stage: ProjectStage
+  taskCount: number
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stage.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="sm-stage-item"
+    >
+      <div className="sm-stage-drag" {...attributes} {...listeners}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+      </div>
+      <span className="sm-stage-dot" style={{ background: stage.color }} />
+      <span className="sm-stage-name">{stage.name}</span>
+      <span className="sm-stage-count">{taskCount} tarefa{taskCount !== 1 ? 's' : ''}</span>
+      <div className="sm-stage-actions">
+        <button type="button" className="sm-action-btn" onClick={onEdit} title="Editar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button type="button" className="sm-action-btn sm-action-danger" onClick={onDelete} title="Excluir">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ── Stages manager modal ── */
+function StagesManager({ projectId, stages }: {
+  projectId: string
+  stages: ProjectStage[]
+}) {
+  const { tasks, createStage, updateStage, deleteStage, reorderStages } = useAppData()
+  const [localStages, setLocalStages] = useState<ProjectStage[]>([...stages].sort((a, b) => a.order - b.order))
+  useEffect(() => {
+    setLocalStages((curr) => {
+      const sorted = [...stages].sort((a, b) => a.order - b.order)
+      if (sorted.length !== curr.length || sorted.some((s, i) => s.id !== curr[i]?.id)) return sorted
+      return curr
+    })
+  }, [stages])
+  const [editingStage, setEditingStage] = useState<ProjectStage | null>(null)
+  const [showNewStage, setShowNewStage] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newColor, setNewColor] = useState('#5b6af8')
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  const getTaskCount = (stageId: string) => tasks.filter((t) => t.stageId === stageId).length
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = localStages.findIndex((s) => s.id === active.id)
+    const newIndex = localStages.findIndex((s) => s.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const newStages = [...localStages]
+    const [moved] = newStages.splice(oldIndex, 1)
+    newStages.splice(newIndex, 0, moved)
+    setLocalStages(newStages)
+    reorderStages(newStages.map((s) => s.id))
+  }
+
+  const handleCreate = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!newName.trim()) return
+    await createStage(projectId, newName.trim(), newColor)
+    setNewName('')
+    setNewColor('#5b6af8')
+    setShowNewStage(false)
+  }
+
+  const handleUpdate = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!editingStage) return
+    await updateStage(editingStage.id, editingStage.name, editingStage.color)
+    setLocalStages((curr) =>
+      curr.map((s) => (s.id === editingStage.id ? { ...s, name: editingStage.name, color: editingStage.color } : s)),
+    )
+    setEditingStage(null)
+  }
+
+  const handleDelete = async (stageId: string) => {
+    const stage = localStages.find((s) => s.id === stageId)
+    const count = getTaskCount(stageId)
+    const msg = count > 0
+      ? `A etapa "${stage?.name}" tem ${count} tarefa${count !== 1 ? 's' : ''}. As tarefas serao movidas para a primeira etapa disponivel. Deseja excluir?`
+      : `Tem certeza que deseja excluir a etapa "${stage?.name}"?`
+    if (!window.confirm(msg)) return
+    await deleteStage(stageId)
+    setLocalStages((curr) => {
+      const filtered = curr.filter((s) => s.id !== stageId)
+      return filtered.map((s, i) => ({ ...s, order: i + 1 }))
+    })
+  }
+
+  return (
+    <div className="stages-manager">
+      {localStages.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+          <p>Nenhuma etapa ainda. Crie a primeira abaixo.</p>
+        </div>
+      ) : (
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <SortableContext items={localStages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+            <div className="sm-stage-list">
+              {localStages.map((stage) => (
+                <SortableStageItem
+                  key={stage.id}
+                  stage={stage}
+                  taskCount={getTaskCount(stage.id)}
+                  onEdit={() => setEditingStage({ ...stage })}
+                  onDelete={() => void handleDelete(stage.id)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {editingStage && (
+        <div className="sm-edit-form">
+          <div className="sm-edit-header">Editar etapa</div>
+          <form onSubmit={(e) => void handleUpdate(e)}>
+            <div className="fg">
+              <div className="ff"><label>Nome</label>
+                <input value={editingStage.name} onChange={(e) => setEditingStage((c) => c ? { ...c, name: e.target.value } : c)} required /></div>
+              <div className="ff"><label>Cor</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input type="color" value={editingStage.color} onChange={(e) => setEditingStage((c) => c ? { ...c, color: e.target.value } : c)} style={{ width: 40, height: 36, borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer' }} />
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <button type="submit" className="btn btn-primary btn-sm">Salvar</button>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditingStage(null)}>Cancelar</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {showNewStage ? (
+        <div className="sm-new-form">
+          <div className="sm-edit-header">Nova etapa</div>
+          <form onSubmit={(e) => void handleCreate(e)}>
+            <div className="fg">
+              <div className="ff"><label>Nome *</label>
+                <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex: QA, Revisao..." required /></div>
+              <div className="ff"><label>Cor</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} style={{ width: 40, height: 36, borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer' }} />
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <button type="submit" className="btn btn-primary btn-sm">Criar</button>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowNewStage(false)}>Cancelar</button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <button type="button" className="btn btn-outline btn-sm" style={{ marginTop: '0.75rem', width: '100%' }} onClick={() => setShowNewStage(true)}>
+          + Nova etapa
+        </button>
+      )}
+    </div>
+  )
+}
+
 /* ── Main page ── */
 export default function KanbanPage() {
-  const { projects, stages, tasks, updateTaskStatus } = useAppData()
+  const navigate = useNavigate()
+  const { projects, stages, tasks, updateTaskStatus, deleteStage } = useAppData()
 
   const [projectId, setProjectId] = useState<string>(projects[0]?.id ?? '')
   const [addTaskStageId, setAddTaskStageId] = useState<string | null>(null)
@@ -389,6 +602,7 @@ export default function KanbanPage() {
   const [editStage, setEditStage] = useState<ProjectStage | null>(null)
   const [showNewStage, setShowNewStage] = useState(false)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
+  const [showStagesManager, setShowStagesManager] = useState(false)
 
   const projectStages = useMemo(
     () => stages.filter((s) => s.projectId === projectId).sort((a, b) => a.order - b.order),
@@ -448,9 +662,11 @@ export default function KanbanPage() {
             </div>
           )}
         </div>
-        <button className="btn btn-outline btn-sm" onClick={() => setShowNewStage(true)}>
-          + Etapa
-        </button>
+        {projectId && (
+          <button className="btn btn-outline btn-sm" onClick={() => setShowStagesManager(true)}>
+            Gerenciar etapas
+          </button>
+        )}
         <button
           className="btn btn-primary btn-sm"
           onClick={() => setAddTaskStageId(projectStages[0]?.id ?? '')}
@@ -461,7 +677,15 @@ export default function KanbanPage() {
       </div>
 
       {/* Board */}
-      {projectStages.length === 0 ? (
+      {projects.length === 0 ? (
+        <div className="kb-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <p>Nenhum projeto encontrado. Crie seu primeiro projeto para comecar!</p>
+          <button className="btn btn-primary" onClick={() => navigate('/projects')}>
+            Criar Primeiro Projeto
+          </button>
+        </div>
+      ) : projectStages.length === 0 ? (
         <div className="kb-empty">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="7" height="18" rx="2"/><rect x="14" y="3" width="7" height="18" rx="2"/></svg>
           <p>Sem etapas. Crie a primeira etapa acima.</p>
@@ -509,13 +733,32 @@ export default function KanbanPage() {
 
       {editStage && (
         <Modal title="Editar etapa" onClose={() => setEditStage(null)} size="sm">
-          <StageEditForm stage={editStage} onDone={() => setEditStage(null)} />
+          <StageEditForm
+            stage={editStage}
+            onDone={() => setEditStage(null)}
+            onDelete={() => {
+              const taskCount = tasks.filter((t) => t.stageId === editStage.id).length
+              const msg = taskCount > 0
+                ? `A etapa "${editStage.name}" tem ${taskCount} tarefa${taskCount !== 1 ? 's' : ''}. As tarefas serao movidas para a primeira etapa disponivel. Deseja excluir?`
+                : `Tem certeza que deseja excluir a etapa "${editStage.name}"?`
+              if (window.confirm(msg)) {
+                void deleteStage(editStage.id)
+                setEditStage(null)
+              }
+            }}
+          />
         </Modal>
       )}
 
       {showNewStage && (
         <Modal title="Nova etapa" onClose={() => setShowNewStage(false)} size="sm">
           <NewStageForm projectId={projectId} onDone={() => setShowNewStage(false)} />
+        </Modal>
+      )}
+
+      {showStagesManager && (
+        <Modal title="Gerenciar etapas" onClose={() => setShowStagesManager(false)} size="md">
+          <StagesManager projectId={projectId} stages={projectStages} />
         </Modal>
       )}
     </section>

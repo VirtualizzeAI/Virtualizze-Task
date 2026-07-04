@@ -1,5 +1,5 @@
 
-.tasks-list-page { display: flex; flex-direction: column; }
+.tasks-list-page { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
 
 .task-filters { display: flex; gap: 0.5rem; }
 .task-filters select {

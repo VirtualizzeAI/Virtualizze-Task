@@ -6,7 +6,7 @@ interface ModalProps {
   title: string
   onClose: () => void
   children: ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 }
 
 export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {

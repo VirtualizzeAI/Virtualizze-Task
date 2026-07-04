@@ -130,9 +130,7 @@ export function Layout() {
             </svg>
           </button>
           <div className="topbar-title" />
-          <div className="topbar-actions">
-            <div className="topbar-avatar">V</div>
-          </div>
+          <div className="topbar-actions"></div>
         </header>
 
         <main>

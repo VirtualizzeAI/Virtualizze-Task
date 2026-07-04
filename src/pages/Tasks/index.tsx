@@ -13,7 +13,7 @@ const formatDuration = (seconds: number) => {
 function TaskDetailModal({ taskId, onClose }: { taskId: string; onClose: () => void }) {
   const {
     tasks, projects, stages, taskTodos, updateTaskFull, updateTaskStatus, updateTaskManualMinutes,
-    startTaskTimer, stopTaskTimer, createTaskTodo, toggleTaskTodo,
+    startTaskTimer, stopTaskTimer, createTaskTodo, toggleTaskTodo, deleteTask, deleteTaskTodo,
   } = useAppData()
 
   const task = tasks.find((t) => t.id === taskId)
@@ -100,7 +100,7 @@ function TaskDetailModal({ taskId, onClose }: { taskId: string; onClose: () => v
 
       <div className="task-detail-todos">
         <div className="td-header">
-          <span>To-do list</span>
+          <span>Sub-Tarefas</span>
           <span className="badge badge-purple">{todos.filter((t) => t.done).length}/{todos.length}</span>
         </div>
         {todos.length > 0 && (
@@ -118,12 +118,24 @@ function TaskDetailModal({ taskId, onClose }: { taskId: string; onClose: () => v
             <li key={todo.id} className="td-item">
               <input type="checkbox" checked={todo.done} onChange={() => void toggleTaskTodo(todo.id)} />
               <span className={todo.done ? 'td-done' : ''}>{todo.title}</span>
+              <button type="button" className="kb-todo-remove" onClick={() => void deleteTaskTodo(todo.id)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </li>
           ))}
         </ul>
       </div>
 
       <div className="modal-footer">
+        <button type="button" className="btn btn-danger btn-sm" onClick={() => {
+          if (window.confirm('Tem certeza que deseja excluir esta tarefa?')) {
+            void deleteTask(taskId)
+            onClose()
+          }
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Excluir
+        </button>
         <button type="submit" className="btn btn-primary">Salvar alteracoes</button>
       </div>
     </form>
@@ -323,7 +335,7 @@ function CreateTaskForm({ projects, stages, onDone }: {
 
       <div className="kb-todo-section">
         <div className="kb-todo-header">
-          <span>To-do list</span>
+          <span>Sub-Tarefas</span>
           <span className="badge badge-purple">{ntTodoDrafts.length}</span>
         </div>
         <div className="kb-todo-add">

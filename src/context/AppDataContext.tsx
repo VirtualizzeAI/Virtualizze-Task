@@ -74,6 +74,11 @@ interface AppDataContextValue {
   toggleTaskTodo: (todoId: string) => Promise<void>
   createClient: (input: CreateClientInput) => Promise<void>
   updateClient: (clientId: string, input: Partial<CreateClientInput>) => Promise<void>
+  deleteProject: (projectId: string) => Promise<void>
+  deleteTask: (taskId: string) => Promise<void>
+  deleteTaskTodo: (todoId: string) => Promise<void>
+  deleteStage: (stageId: string) => Promise<void>
+  reorderStages: (orderedIds: string[]) => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | undefined>(undefined)
@@ -730,6 +735,89 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const deleteProject = useCallback(async (projectId: string) => {
+    setProjects((curr) => curr.filter((p) => p.id !== projectId))
+    setStages((curr) => curr.filter((s) => s.projectId !== projectId))
+    const projectTaskIds = tasks.filter((t) => t.projectId === projectId).map((t) => t.id)
+    setTasks((curr) => curr.filter((t) => t.projectId !== projectId))
+    setTaskTodos((curr) => curr.filter((t) => !projectTaskIds.includes(t.taskId)))
+
+    if (supabase) {
+      await supabase.from('projects').delete().eq('id', Number(projectId))
+    }
+  }, [tasks])
+
+  const deleteTask = useCallback(async (taskId: string) => {
+    setTasks((curr) => curr.filter((t) => t.id !== taskId))
+    setTaskTodos((curr) => curr.filter((t) => t.taskId !== taskId))
+
+    if (supabase) {
+      await supabase.from('tasks').delete().eq('id', Number(taskId))
+    }
+  }, [])
+
+  const deleteTaskTodo = useCallback(async (todoId: string) => {
+    setTaskTodos((curr) => curr.filter((t) => t.id !== todoId))
+
+    if (supabase) {
+      await supabase.from('task_todos').delete().eq('id', Number(todoId))
+    }
+  }, [])
+
+  const deleteStage = useCallback(async (stageId: string) => {
+    const stageToDelete = stages.find((s) => s.id === stageId)
+    if (!stageToDelete) return
+
+    const siblingStages = stages
+      .filter((s) => s.projectId === stageToDelete.projectId && s.id !== stageId)
+      .sort((a, b) => a.order - b.order)
+    const fallbackStageId = siblingStages[0]?.id
+
+    if (fallbackStageId) {
+      setTasks((curr) =>
+        curr.map((t) =>
+          t.stageId === stageId ? { ...t, stageId: fallbackStageId } : t,
+        ),
+      )
+      if (supabase) {
+        await supabase.from('tasks').update({ stage_id: Number(fallbackStageId) }).eq('stage_id', Number(stageId))
+      }
+    }
+
+    setStages((curr) => {
+      const filtered = curr.filter((s) => s.id !== stageId)
+      return filtered.map((s) => {
+        if (s.projectId !== stageToDelete.projectId) return s
+        const idx = siblingStages.findIndex((ss) => ss.id === s.id)
+        return { ...s, order: idx + 1 }
+      })
+    })
+
+    if (supabase) {
+      await supabase.from('project_stages').delete().eq('id', Number(stageId))
+      if (fallbackStageId) {
+        for (let i = 0; i < siblingStages.length; i++) {
+          await supabase.from('project_stages').update({ order_index: i + 1 }).eq('id', Number(siblingStages[i].id))
+        }
+      }
+    }
+  }, [stages])
+
+  const reorderStages = useCallback((orderedIds: string[]) => {
+    setStages((curr) =>
+      curr.map((s) => {
+        const idx = orderedIds.indexOf(s.id)
+        return idx >= 0 ? { ...s, order: idx + 1 } : s
+      }),
+    )
+
+    if (supabase) {
+      for (let i = 0; i < orderedIds.length; i++) {
+        void supabase.from('project_stages').update({ order_index: i + 1 }).eq('id', Number(orderedIds[i]))
+      }
+    }
+  }, [])
+
   const dashboardStats = useMemo<DashboardStats>(() => {
     const now = dayjs()
     const inProgressTasks = tasks.filter((task) => task.status === 'in_progress').length
@@ -772,6 +860,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       toggleTaskTodo,
       createClient,
       updateClient,
+      deleteProject,
+      deleteTask,
+      deleteTaskTodo,
+      deleteStage,
+      reorderStages,
     }),
     [
       clients,
@@ -785,6 +878,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       updateTaskFull,
       createTaskTodo,
       dashboardStats,
+      deleteProject,
+      deleteTask,
+      deleteTaskTodo,
+      deleteStage,
+      reorderStages,
       isLoading,
       projects,
       stages,

@@ -1,8 +1,8 @@
 
-.kb-page { display: flex; flex-direction: column; height: calc(100vh - 52px - 3rem); }
+.kb-page { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
 .kb-topbar {
-  display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
   flex-shrink: 0; flex-wrap: wrap;
 }
 
@@ -21,12 +21,13 @@
 .kb-empty {
   display: flex; flex-direction: column; align-items: center; gap: 1rem;
   padding: 4rem 1rem; color: var(--text-muted); text-align: center;
+  flex: 1; justify-content: center;
 }
 .kb-empty p { font-size: 0.9rem; }
 
 .kb-board {
   display: flex; gap: 1rem; overflow-x: auto;
-  padding-bottom: 1.5rem; flex: 1; align-items: flex-start;
+  padding-bottom: 1.5rem; flex: 1; align-items: stretch;
 }
 
 .kb-board::-webkit-scrollbar { height: 6px; }
@@ -36,6 +37,7 @@
   background: var(--surface-2); border: 1.5px solid var(--border);
   border-radius: var(--radius-lg); overflow: hidden;
   transition: border-color 0.15s;
+  min-height: 0; max-height: 100%;
 }
 .kb-column-over { border-color: var(--brand); background: var(--brand-light); }
 
@@ -67,7 +69,9 @@
 }
 .kb-add-btn:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
 
-.kb-col-body { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; min-height: 120px; }
+.kb-col-body { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; min-height: 120px; overflow-y: auto; flex: 1; }
+.kb-col-body::-webkit-scrollbar { width: 4px; }
+.kb-col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 .kb-card {
   display: flex; align-items: stretch; background: var(--surface-1);
@@ -122,6 +126,62 @@
 }
 
 @media (max-width: 768px) {
-  .kb-page { height: auto; }
+  .kb-page { flex: none; height: auto; }
   .kb-column { width: 260px; }
+}
+
+/* ── Stages Manager ── */
+.stages-manager { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.sm-stage-list {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-md); overflow: hidden;
+}
+
+.sm-stage-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem; background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.sm-stage-item:last-child { border-bottom: none; }
+.sm-stage-item:hover { background: var(--surface-2); }
+
+.sm-stage-drag {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; cursor: grab; color: var(--text-muted);
+  border-radius: var(--radius-sm); transition: background 0.1s, color 0.1s;
+  flex-shrink: 0;
+}
+.sm-stage-drag:hover { background: var(--surface-0); color: var(--text-secondary); }
+
+.sm-stage-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+.sm-stage-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); flex: 1; min-width: 0; }
+
+.sm-stage-count {
+  font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.sm-stage-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
+
+.sm-action-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: var(--radius-sm);
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.sm-action-btn:hover { background: var(--brand-light); color: var(--brand); border-color: var(--brand); }
+.sm-action-danger:hover { background: #fee2e2; color: var(--accent-red); border-color: var(--accent-red); }
+
+.sm-edit-form, .sm-new-form {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 1rem;
+}
+
+.sm-edit-header {
+  font-size: 0.85rem; font-weight: 700; color: var(--text-primary);
+  margin-bottom: 0.75rem;
 }

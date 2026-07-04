@@ -1,5 +1,5 @@
 
-.clients-page { display: flex; flex-direction: column; }
+.clients-page { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
 
 .client-empty {
   display: flex; flex-direction: column; align-items: center; gap: 1rem;

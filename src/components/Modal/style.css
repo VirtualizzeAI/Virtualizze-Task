@@ -38,6 +38,8 @@
 .modal-md  { max-width: 600px; }
 .modal-lg  { max-width: 780px; }
 .modal-xl  { max-width: 980px; }
+.modal-2xl { max-width: 92vw; min-height: calc(100vh - 1.5rem); max-height: calc(100vh - 1.5rem); }
+.modal-backdrop:has(.modal-2xl) { padding: 0.75rem; }
 
 .modal-header {
   display: flex;
